@@ -5,9 +5,25 @@ namespace app\widgets\HistoryList\helpers;
 use app\models\Call;
 use app\models\Customer;
 use app\models\History;
+use Yii;
+use yii\helpers\Html;
 
 class HistoryListHelper
 {
+    private const displayClassMap = [
+        History::EVENT_CREATED_TASK => ItemCommonTaskChange::class,
+        History::EVENT_COMPLETED_TASK => ItemCommonTaskChange::class,
+        History::EVENT_UPDATED_TASK => ItemCommonTaskChange::class,
+        History::EVENT_INCOMING_SMS => ItemCommonSms::class,
+        History::EVENT_OUTGOING_SMS => ItemCommonSms::class,
+        History::EVENT_OUTGOING_FAX => ItemCommonGeneral::class,
+        History::EVENT_INCOMING_FAX => ItemCommonGeneral::class,
+        History::EVENT_INCOMING_CALL => ItemCommonCall::class,
+        History::EVENT_OUTGOING_CALL => ItemCommonCall::class,
+        History::EVENT_CUSTOMER_CHANGE_TYPE => ItemCommonGeneral::class,
+        History::EVENT_CUSTOMER_CHANGE_QUALITY => ItemCommonGeneral::class,
+    ];
+
     public static function getBodyByModel(History $model)
     {
         switch ($model->event) {
@@ -21,7 +37,16 @@ class HistoryListHelper
                 return $model->sms->message ? $model->sms->message : '';
             case History::EVENT_OUTGOING_FAX:
             case History::EVENT_INCOMING_FAX:
-                return $model->eventText;
+                $fax = $model->fax;
+                return $model->eventText . ' - ' .
+                    (isset($fax->document) ? Html::a(
+                        Yii::t('app', 'view document'),
+                        $fax->document->getViewUrl(),
+                        [
+                            'target' => '_blank',
+                            'data-pjax' => 0
+                        ]
+                    ) : '');
             case History::EVENT_CUSTOMER_CHANGE_TYPE:
                 return "$model->eventText " .
                     (Customer::getTypeTextByType($model->getDetailOldValue('type')) ?? "not set") . ' to ' .
@@ -39,4 +64,11 @@ class HistoryListHelper
                 return $model->eventText;
         }
     }
+
+    public static function getDisplayHelper($model): ItemInterface
+    {
+        $helperClass = array_key_exists($model->event, self::displayClassMap) ? self::displayClassMap[$model->event] : ItemCommonDefault::class;
+        return new $helperClass($model);
+    }
+
 }

@@ -3,7 +3,11 @@
 namespace app\controllers;
 
 use app\models\search\HistorySearch;
+use app\services\RequestHandlingService;
+use app\widgets\Export\Export;
 use Yii;
+use yii\helpers\ArrayHelper;
+use yii\helpers\Url;
 use yii\web\Controller;
 
 class SiteController extends Controller
@@ -28,7 +32,18 @@ class SiteController extends Controller
      */
     public function actionIndex()
     {
-        return $this->render('index');
+
+        $modelSearch = new HistorySearch();
+
+        return $this->render('index', [
+            'modelSearch' => $modelSearch,
+            'dataProvider' => $modelSearch->search(Yii::$app->request->queryParams),
+            'linkExport' => RequestHandlingService::getLinkExport(
+                Yii::$app->getRequest(),
+                Export::FORMAT_CSV,
+                'site/export'
+            ),
+        ]);
     }
 
 
@@ -38,12 +53,14 @@ class SiteController extends Controller
      */
     public function actionExport($exportType)
     {
-        $model = new HistorySearch();
+        $modelSearch = new HistorySearch();
 
         return $this->render('export', [
-            'dataProvider' => $model->search(Yii::$app->request->queryParams),
+            'dataProvider' => $modelSearch->search(Yii::$app->request->queryParams),
+            'model' => $modelSearch,
             'exportType' => $exportType,
-            'model' => $model
         ]);
     }
+
+
 }
